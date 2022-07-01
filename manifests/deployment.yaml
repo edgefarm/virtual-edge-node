@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: virtual-edge-node
+  name: virtual-edge-node
+  namespace: virtual-edge-nodes
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      k8s-app: virtual-edge-node
+  template:
+    metadata:
+      labels:
+        k8s-app: virtual-edge-node
+        node-dns.host: virtual-edge-node
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+              - matchExpressions:
+                  - key: node-role.kubernetes.io/edge
+                    operator: DoesNotExist
+                  - key: node-role.kubernetes.io/agent
+                    operator: DoesNotExist
+      containers:
+        - image: ghcr.io/edgefarm/virtual-edge-node:latest
+          securityContext:
+            privileged: true
+          imagePullPolicy: IfNotPresent
+          name: virtual-edge-node
+          resources:
+            limits:
+              cpu: "500"
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 128Mi
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+          env:
+            - name: CLOUDCORE_ADDRESS
+              value: cloudcore.kubeedge.svc.cluster.local
+          volumeMounts:
+            - name: certs
+              mountPath: /etc/kubeedge/certs/
+            #   node.key
+            #   readOnly: true
+            # - name: certs
+            #   mountPath: /etc/kubeedge/certs/node.pem
+            #   readOnly: true
+            # - name: certs
+            #   mountPath: /etc/kubeedge/certs/rootCa.pem
+            #   readOnly: true
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      volumes:
+        - name: certs
+          secret:
+            secretName: virtual-edge-node-certs
