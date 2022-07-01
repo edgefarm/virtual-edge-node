@@ -21,3 +21,8 @@
 node_modules
 package-lock.json
 package.json
+
+# certificates
+*.pem
+*.key
+.env

@@ -1,0 +1,25 @@
+# Customize namespace where to manage the virtual edge node pods
+namespace: virtual-edge-nodes
+
+resources:
+  - namespace.yaml
+  - ../manifests
+
+patches:
+  # Increase the number of virtual edge nodes by overwriting the replicas value to '3'
+  - target:
+      version: v1
+      kind: Deployment
+      name: virtual-edge-node
+    patch: |-
+      - op: replace
+        path: /spec/replicas
+        value: 3
+
+secretGenerator:
+  # Create the secreet that is needed for the virtual edge node to connect to cloudcore from kubeedge
+  - name: virtual-edge-node-certs
+    files:
+      - node.pem=.env/node/node.pem
+      - node.key=.env/node/node.key
+      - rootCA.pem=.env/ca/rootCA.pem

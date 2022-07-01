@@ -1,0 +1,33 @@
+version: v1beta11
+
+vars:
+  # kubeedge certificates
+  - name: KUBEEDGE_CA
+    value: kubeedge
+
+dependencies:
+  - name: mkcert
+    source:
+      git: https://github.com/edgefarm/devspace.base
+      subPath: /environments/mkcert
+      branch: v1.1.0
+
+commands:
+  - name: init
+    command: |-
+      devspace run init-virtual-edge-node-certs
+
+  - name: init-virtual-edge-node-certs
+    command: |-
+      #!/bin/bash
+      set -e
+      devspace run edgefarm-core.mkcert.create-client-cert ${KUBEEDGE_CA} \
+        -cert-file $(pwd)/dev/manifests/.env/node/node.pem \
+        -key-file $(pwd)/dev/manifests/.env/node/node.key *.nip.io *.edgefarm.local cloudcore.kubeedge.svc.cluster.local
+
+deployments:
+  - name: virtual-edge-node
+    kubectl:
+      kustomize: true
+      manifests:
+        - dev/manifests
