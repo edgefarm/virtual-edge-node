@@ -1,3 +1,5 @@
+!/**/.gitkeep
+
 # Binaries for programs and plugins
 *.exe
 *.exe~
@@ -26,3 +28,4 @@ package.json
 *.pem
 *.key
 .env
+
