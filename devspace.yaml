@@ -12,22 +12,27 @@ dependencies:
       subPath: /environments/mkcert
       branch: v1.1.0
 
-commands:
-  - name: init
-    command: |-
-      devspace run init-virtual-edge-node-certs
-
-  - name: init-virtual-edge-node-certs
-    command: |-
-      #!/bin/bash
-      set -e
-      devspace run edgefarm-core.mkcert.create-client-cert ${KUBEEDGE_CA} \
-        -cert-file $(pwd)/dev/manifests/.env/node/node.pem \
-        -key-file $(pwd)/dev/manifests/.env/node/node.key *.nip.io *.edgefarm.local cloudcore.kubeedge.svc.cluster.local
-
 deployments:
   - name: virtual-edge-node
     kubectl:
       kustomize: true
       manifests:
         - dev/manifests
+
+hooks:
+  - name: "prepare-virtual-edge-nodes-certs"
+    command: |-
+      #!/bin/bash
+      set -e
+      devspace run mkcert.create-client-cert ${KUBEEDGE_CA} \
+        -cert-file $(pwd)/dev/manifests/.env/node/node.pem \
+        -key-file $(pwd)/dev/manifests/.env/node/node.key *.nip.io *.edgefarm.local cloudcore.kubeedge.svc.cluster.local
+      cp $HOME/.devspace/ca/${KUBEEDGE_CA}/rootCA.pem $(pwd)/dev/manifests/.env/ca
+    events: ["before:deploy:virtual-edge-node"]
+
+  - name: "cleanup-virtual-edge-nodes"
+    command: |-
+      #!/bin/bash
+      set -e
+      kubectl get nodes -o json | jq '.items | map(select(.metadata.name | test("virtual-device-.+"))) | {kind: "List", items: .}' | kubectl delete -f -
+    events: ["after:purge:virtual-edge-node"]

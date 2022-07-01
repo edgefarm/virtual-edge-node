@@ -3,7 +3,7 @@ namespace: virtual-edge-nodes
 
 resources:
   - namespace.yaml
-  - ../manifests
+  - ../../manifests
 
 patches:
   # Increase the number of virtual edge nodes by overwriting the replicas value to '3'
