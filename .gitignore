@@ -27,5 +27,5 @@ package.json
 # certificates
 *.pem
 *.key
-.env
-
+.env/ca
+.env/node
