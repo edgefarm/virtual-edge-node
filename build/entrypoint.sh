@@ -37,6 +37,32 @@ for process in "${processes[@]}"; do
     fi
 done
 
+# Test if cloudcore is up and running before trying to register
+echo "Waiting until all cloudcore ports are reachable"
+while :
+do
+    sleep 1
+    echo trying port 10000
+    port10000=$(echo | openssl s_client -verify_return_error -connect ${CLOUDCORE_ADDRESS}:10000 2>/dev/null | awk -F\: '$1 ~ "Verify return code"{print $2}' | awk -F " " '{print $1}')
+    echo trying port 10002
+    port10002=$(echo | openssl s_client -verify_return_error -connect ${CLOUDCORE_ADDRESS}:10002 2>/dev/null | awk -F\: '$1 ~ "Verify return code"{print $2}' | awk -F " " '{print $1}')
+    echo trying port 10003
+    port10003=$(echo | openssl s_client -verify_return_error -connect ${CLOUDCORE_ADDRESS}:10003 2>/dev/null | awk -F\: '$1 ~ "Verify return code"{print $2}' | awk -F " " '{print $1}')
+    echo trying port 10004
+    port10004=$(echo | openssl s_client -verify_return_error -connect ${CLOUDCORE_ADDRESS}:10004 2>/dev/null | awk -F\: '$1 ~ "Verify return code"{print $2}' | awk -F " " '{print $1}')
+    i=0
+    [[ -z "$port10000" ]] && continue && echo found; i=$((i+1))
+    [[ -z "$port10002" ]] && continue && echo found; i=$((i+1))
+    [[ -z "$port10003" ]] && continue && echo found; i=$((i+1))
+    [[ -z "$port10004" ]] && continue && echo found; i=$((i+1))
+    
+    echo $i
+    if [ "$i" -eq 4 ]; then
+        echo All cloudcore ports reachable.
+        break
+    fi
+done
+
 # Start the first process
 echo Starting edgecore
 mkdir -p /var/log/kubeedge
