@@ -16,6 +16,7 @@ deployments:
   - name: virtual-edge-node
     kubectl:
       kustomize: true
+      namespace: virtual-edge-nodes
       manifests:
         - dev/manifests
 
