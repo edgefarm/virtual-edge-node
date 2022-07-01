@@ -30,7 +30,6 @@ hooks:
         -key-file $(pwd)/dev/manifests/.env/node/node.key *.nip.io *.edgefarm.local cloudcore.kubeedge.svc.cluster.local
       cp $HOME/.devspace/ca/${KUBEEDGE_CA}/rootCA.pem $(pwd)/dev/manifests/.env/ca
       until kubectl wait --for=condition=Ready pods -l k8s-app=kubeedge -n kubeedge --timeout=60s 2>/dev/null; do echo -n "." && sleep 2; done
-      sleep 10 # give cloudcore some extra time to get ready
     events: ["before:deploy:virtual-edge-node"]
 
   - name: "cleanup-virtual-edge-nodes"
