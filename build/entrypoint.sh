@@ -55,7 +55,7 @@ do
     [[ -z "$port10002" ]] && continue && echo found; i=$((i+1))
     [[ -z "$port10003" ]] && continue && echo found; i=$((i+1))
     [[ -z "$port10004" ]] && continue && echo found; i=$((i+1))
-    
+
     echo $i
     if [ "$i" -eq 4 ]; then
         echo All cloudcore ports reachable.
