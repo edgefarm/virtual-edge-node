@@ -4,37 +4,59 @@ vars:
   # kubeedge certificates
   - name: KUBEEDGE_CA
     value: kubeedge
+  - name: CAROOT
+    command: echo $HOME/.devspace/ca/${KUBEEDGE_CA}
 
 dependencies:
   - name: mkcert
     source:
       git: https://github.com/edgefarm/devspace.base
       subPath: /environments/mkcert
-      branch: v1.1.0
+      branch: v2.0.0
+    vars:
+      - name: CAROOT
+        value: ${CAROOT}
 
-deployments:
-  - name: virtual-edge-node
-    namespace: virtual-edge-nodes
-    kubectl:
-      kustomize: true
-      manifests:
-        - dev/manifests
+commands:
+  - name: start
+    command: devspace --var KUBEEDGE_CA=${KUBEEDGE_CA} --var CAROOT=${CAROOT} deploy --profile=with-deployments
 
-hooks:
-  - name: "prepare-virtual-edge-nodes-certs"
-    command: |-
-      #!/bin/bash
-      set -e
-      devspace run mkcert.create-client-cert ${KUBEEDGE_CA} \
-        -cert-file $(pwd)/dev/manifests/.env/node/node.pem \
-        -key-file $(pwd)/dev/manifests/.env/node/node.key *.nip.io *.edgefarm.local cloudcore.kubeedge.svc.cluster.local
-      cp $HOME/.devspace/ca/${KUBEEDGE_CA}/rootCA.pem $(pwd)/dev/manifests/.env/ca
-      until kubectl wait --for=condition=Ready pods -l k8s-app=kubeedge -n kubeedge --timeout=60s 2>/dev/null; do echo -n "." && sleep 2; done
-    events: ["before:deploy:virtual-edge-node"]
+  - name: stop
+    command: devspace --var KUBEEDGE_CA=${KUBEEDGE_CA} --var CAROOT=${CAROOT} purge --profile=with-deployments
 
-  - name: "cleanup-virtual-edge-nodes"
-    command: |-
-      #!/bin/bash
-      set -e
-      kubectl get nodes -o json | jq '.items | map(select(.metadata.name | test("virtual-device-.+"))) | {kind: "List", items: .}' | kubectl delete -f -
-    events: ["after:purge:virtual-edge-node"]
+profiles:
+  - name: with-deployments
+    merge:
+
+      deployments:
+        - name: virtual-edge-node
+          namespace: virtual-edge-nodes
+          kubectl:
+            kustomize: true
+            manifests:
+              - dev/manifests
+
+      hooks:
+        - name: "prepare-virtual-edge-nodes-certs"
+          command: |-
+            #!/bin/bash
+            set -e
+            FILE=$(pwd)/dev/manifests/.env/node/node.pem
+            if [ -f "$FILE" ]; then
+              echo "virtual edge node certificate exist's. skipping."
+              exit 0
+            fi
+            devspace --var CAROOT=${CAROOT} run mkcert.create-client-cert \
+              -cert-file $(pwd)/dev/manifests/.env/node/node.pem \
+              -key-file $(pwd)/dev/manifests/.env/node/node.key *.nip.io *.edgefarm.local cloudcore.kubeedge.svc.cluster.local
+            cp ${CAROOT}/rootCA.pem $(pwd)/dev/manifests/.env/ca
+          events: ["before:deploy:virtual-edge-node"]
+
+        - name: "cleanup-virtual-edge-nodes"
+          command: |-
+            #!/bin/bash
+            set -e
+            kubectl get nodes -o json | jq '.items | map(select(.metadata.name | test("virtual-device-.+"))) | {kind: "List", items: .}' | kubectl delete -f -
+            rm $(pwd)/dev/manifests/.env/node/node.pem
+            rm $(pwd)/dev/manifests/.env/node/node.key
+          events: ["after:purge:virtual-edge-node"]
